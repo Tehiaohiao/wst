@@ -10,7 +10,7 @@
 #include <time.h>
 using namespace std;
 
-int insert_file(std::string filename, WorkingSetTree<int> &wst) {
+int insert_file_wst(std::string filename, WorkingSetTree<int> &wst) {
     std::ifstream ifs;
     ifs.open(filename);
 
@@ -32,7 +32,7 @@ int insert_file(std::string filename, WorkingSetTree<int> &wst) {
     return 0;
 }
 
-int search_file(std::string filename, WorkingSetTree<int> &wst) {
+int search_file_wst(std::string filename, WorkingSetTree<int> &wst) {
     std::ifstream ifs;
     ifs.open(filename);
 
@@ -272,7 +272,7 @@ void run_workingsettree_command_line() {
     }
 }
 
-void time_btree_sec() {
+void time_btree_sec(std::string tree_file, std::string insert_file, std::string search_file, std::string delete_file) {
 
     time_t start, end;
     double seconds;
@@ -280,27 +280,24 @@ void time_btree_sec() {
     BTree<int> btree;
 
     time(&start);
-    insert_file_btree("data\\original_unique_1_500000", btree);
+    insert_file_btree(tree_file, btree);
     time(&end);
     seconds = difftime(end, start);
     cout << "Time taken to insert 500,000 elements into b-tree: " << seconds << endl;
     cout << "btree size: " << btree.size() << endl;
-    //string file_string = "data\\unique\\unique";
-
 
     // searching
     time(&start);
-    search_file_btree("data\\p1_p99_500_50000_0", btree);
+    search_file_btree(search_file, btree);
     time(&end);
 
     seconds = difftime(end, start);
 
     cout << "Time taken to search 50,000 elements in b-tree: " << seconds << endl;
 
-
     // deleting
     time(&start);
-    delete_file_btree("data\\p1_p99_500_50000_2", btree);
+    delete_file_btree(delete_file, btree);
     time(&end);
 
     seconds = difftime(end, start);
@@ -310,7 +307,7 @@ void time_btree_sec() {
 
     // inserting
     time(&start);
-    insert_file_btree("data\\p1_p99_500_50000_1", btree);
+    insert_file_btree(insert_file, btree);
     time(&end);
 
     seconds = difftime(end, start);
@@ -319,17 +316,17 @@ void time_btree_sec() {
 
 }
 
-void time_btree_ms() {
+void time_btree_ms(std::string tree_file, std::string insert_file, std::string search_file, std::string delete_file) {
 
     clock_t t;
 
     BTree<int> btree;
 
     t = clock();
-    insert_file_btree("data\\original_unique_1_500000", btree);
+    insert_file_btree(tree_file, btree);
     t = clock() - t;
     cout << "Time taken to insert 500,000 elements into b-tree: " << t << endl;
-    cout << "time: " << t << " miliseconds" << endl;
+//    cout << "time: " << t << " miliseconds" << endl;
     cout << CLOCKS_PER_SEC << " clocks per second" << endl;
     cout << "time: " << t*1.0 / CLOCKS_PER_SEC << " seconds" << endl;
     cout << "btree size: " << btree.size() << endl;
@@ -338,39 +335,39 @@ void time_btree_ms() {
 
     // searching
     t = clock();
-    search_file_btree("data\\p1_p99_500_50000_0", btree);
+    search_file_btree(search_file, btree);
     t = clock() - t;
 
     cout << "Time taken to search 50,000 elements in b-tree: " << t << endl;
-    cout << "time: " << t << " miliseconds" << endl;
+//    cout << "time: " << t << " miliseconds" << endl;
     cout << CLOCKS_PER_SEC << " clocks per second" << endl;
     cout << "time: " << t*1.0 / CLOCKS_PER_SEC << " seconds" << endl;
 
 
     // deleting
     t = clock();
-    delete_file_btree("data\\p1_p99_500_50000_2", btree);
+    delete_file_btree(delete_file, btree);
     t = clock() - t;
 
     cout << "Time taken to delete 50,000 elements in b-tree: " << t << endl;
-    cout << "time: " << t << " miliseconds" << endl;
+//    cout << "time: " << t << " miliseconds" << endl;
     cout << CLOCKS_PER_SEC << " clocks per second" << endl;
     cout << "time: " << t*1.0 / CLOCKS_PER_SEC << " seconds" << endl;
 
 
     // inserting
     t = clock();
-    insert_file_btree("data\\p1_p99_500_50000_1", btree);
+    insert_file_btree(insert_file, btree);
     t = clock() - t;
 
     cout << "Time taken to insert 50,000 elements into the b-tree: " << t << endl;
-    cout << "time: " << t << " miliseconds" << endl;
+//    cout << "time: " << t << " miliseconds" << endl;
     cout << CLOCKS_PER_SEC << " clocks per second" << endl;
     cout << "time: " << t*1.0 / CLOCKS_PER_SEC << " seconds" << endl;
 
 }
 
-void time_wst_sec() {
+void time_wst_sec(std::string tree_file, std::string search_file) {
 
     time_t start, end;
     double seconds;
@@ -378,18 +375,15 @@ void time_wst_sec() {
     WorkingSetTree<int> wst;
 
     time(&start);
-    //insert_file("data\\original_unique_1_500000", wst);
-    insert_file("data\\original_unique_1_500000", wst);
+    insert_file_wst(tree_file, wst);
     time(&end);
     seconds = difftime(end, start);
     cout << "Time taken to insert 500,000 elements: " << seconds << endl;
     cout << "insert completed. size: " << wst.size() << endl;
 
-    //string file_string = "data\\unique\\unique0";
-
     time(&start);  // get current time; same as: now = time(NULL)
                    //search_file("data\\p1_p99_500", wst);
-    search_file("data\\p1_p99_500_50000_0", wst);
+    search_file_wst(search_file, wst);
     time(&end);
 
     seconds = difftime(end, start);
@@ -399,32 +393,31 @@ void time_wst_sec() {
 
 }
 
-void time_wst_ms() {
+void time_wst_ms(std::string tree_file, std::string search_file) {
 
     clock_t t;
 
     WorkingSetTree<int> wst;
 
     t = clock();
-    //insert_file("data\\original_unique_1_500000", wst);
-    insert_file("data\\original_unique_1_500000", wst);
+    insert_file_wst(tree_file, wst);
     t = clock() - t;
     cout << "Time taken to insert 500,000 elements: " << t << endl;
     cout << "insert completed. size: " << wst.size() << endl;
-    cout << "time: " << t << " miliseconds" << endl;
+//    cout << "time: " << t << " miliseconds" << endl;
     cout << CLOCKS_PER_SEC << " clocks per second" << endl;
     cout << "time: " << t*1.0 / CLOCKS_PER_SEC << " seconds" << endl;
 
-    //string file_string = "data\\unique\\unique0";
+
 
     t = clock(); // get current time; same as: now = time(NULL)
                  //search_file("data\\p1_p99_500", wst);
-    search_file("data\\p1_p99_500_50000_0", wst);
+    search_file_wst(search_file, wst);
     t = clock() - t;
 
     //cout << "Time taken to search 500,000 elements: " << seconds << endl;
     cout << "Time taken to search 50,000 elements: " << t << endl;
-    cout << "time: " << t << " miliseconds" << endl;
+//    cout << "time: " << t << " miliseconds" << endl;
     cout << CLOCKS_PER_SEC << " clocks per second" << endl;
     cout << "time: " << t*1.0 / CLOCKS_PER_SEC << " seconds" << endl;
 
@@ -432,19 +425,21 @@ void time_wst_ms() {
 
 int main(int argc, char *argv[])
 {
-//    QCoreApplication a(argc, argv);
 
-//    return a.exec();
+    string tree_file = "data/original_unique_1_500000";
+    string insert_file = "data/uniform0_50000";
+    string search_file = "data/uniform1_50000";
+    string delete_file = "data/uniform2_50000";
 
-    //run_btree_command_line();
-        run_workingsettree_command_line();
+    run_btree_command_line();
+        //run_workingsettree_command_line();
         //time_btree_sec();
-        //time_btree_ms();
+//        time_btree_ms(tree_file, insert_file, search_file, delete_file);
 
 //        cout << "\n\n" << endl;
 
         //time_wst_sec();
-//        time_wst_ms();
+//        time_wst_ms(tree_file, search_file);
 
         return 0;
 }
