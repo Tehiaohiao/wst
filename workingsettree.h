@@ -1,0 +1,4 @@
+#ifndef WORKINGSETTREE_H
+#define WORKINGSETTREE_H
+
+#endif // WORKINGSETTREE_H
