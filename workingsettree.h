@@ -13,12 +13,12 @@ const int BASE_HEIGHT = 2; // the max height of the smallest b-tree
 template <class T>
 class WorkingSetTree {
 public:
-    WorkingSetTree() : min_degree(DEFAULT_MINIMUM_DEGREE), scale_factor(DEFAULT_SCALE_FACTOR) {
+    WorkingSetTree() : size_(0), min_degree(DEFAULT_MINIMUM_DEGREE), scale_factor(DEFAULT_SCALE_FACTOR) {
         //std::shared_ptr<BTree<T>> tree = std::make_shared<BTree<T>>(min_degree, BASE_HEIGHT);
         BTree<T> *tree = new BTree<T>(min_degree, BASE_HEIGHT);
         trees.push_back(tree);
     }
-    WorkingSetTree(int degree, int factor = DEFAULT_SCALE_FACTOR) : min_degree(degree), scale_factor(factor) {
+    WorkingSetTree(int degree, int factor = DEFAULT_SCALE_FACTOR) : size_(0), min_degree(degree), scale_factor(factor) {
         //std::shared_ptr<BTree<T>> tree = std::make_shared<BTree<T>>(min_degree, BASE_HEIGHT);
         BTree<T> *tree = new BTree<T>(min_degree, BASE_HEIGHT);
         trees.push_back(tree);

@@ -9,27 +9,20 @@
 #include "node.h"
 
 const int DEFAULT_MIN_DEGREE = 2;
-const int DEFAULT_MAX_HEIGHT = INT_MAX;
+const int DEFAULT_MAX_HEIGHT = 10;
+const int MAX_NUM_FREE_NODES = 350000;
 bool DEBUG = false;
 
 template <class T>
 class BTree {
 public:
     BTree() : min_degree(DEFAULT_MIN_DEGREE), height(1), max_height(DEFAULT_MAX_HEIGHT) {
-        root = new Node<T>(min_degree);
-        head = new Element<T>(); // sentinel
-        head->next = head;
-        head->prev = head;
-
+        create_tree();
     }
     BTree(int min_deg, int max_hght = DEFAULT_MAX_HEIGHT) : min_degree(min_deg), height(1), max_height(max_hght) {
-        root = new Node<T>(min_degree);
-        head = new Element<T>(); // sentinel
-        head->next = head;
-        head->prev = head;
+        create_tree();
     }
     ~BTree();
-    void destroy_tree(Node<T> *node);
     std::pair<Node<T>&, int> search(T val);
     int insert(T val);
     void insert_lru(T val);
@@ -50,6 +43,9 @@ private:
     int max_height;
     int size_;
     Element<T> *head;
+    std::vector<Node<T> *> free_nodes;
+    void create_tree();
+    void destroy_tree(Node<T> *node);
     std::pair<Node<T>&, int> search_node(Node<T> &node, T val);
     void split_child(Node<T> *node, int index);
     int insert_nonfull(Node<T> *node, T element);
@@ -64,9 +60,36 @@ private:
 };
 
 template <class T>
+void BTree<T>::create_tree() {
+    root = new Node<T>(min_degree);
+    head = new Element<T>(); // sentinel
+    head->next = head;
+    head->prev = head;
+
+    int num_free_nodes = 1; // root plus the one possible extra node when tree exceeds max_height
+    int curr_lvl_nodes = 1;
+    for (int i=1; i<max_height; ++i) {
+        curr_lvl_nodes = curr_lvl_nodes * (min_degree*2);
+        num_free_nodes = num_free_nodes + curr_lvl_nodes;
+        if (num_free_nodes > MAX_NUM_FREE_NODES) {
+            num_free_nodes = MAX_NUM_FREE_NODES;
+        }
+    }
+
+    for (int j=0; j<num_free_nodes; ++j) {
+        free_nodes.push_back(new Node<T>(min_degree));
+    }
+}
+
+template <class T>
 BTree<T>::~BTree() {
     destroy_tree(root);
     delete head;
+    while (!free_nodes.empty()) {
+        Node<T> *node = free_nodes.back();
+        free_nodes.pop_back();
+        delete node;
+    }
 }
 
 template <class T>
@@ -78,7 +101,6 @@ void BTree<T>::destroy_tree(Node<T> *node) {
             destroy_tree(node->children[i]);
         }
     }
-
 }
 
 template <class T>
@@ -125,7 +147,16 @@ int BTree<T>::insert(T val) {
 
         // root node is full, split into two nodes and move middle
         // 	element up to become the new root
-        Node<T> *new_root = new Node<T>(min_degree);
+//        Node<T> *new_root = new Node<T>(min_degree);
+        Node<T> *new_root;
+        if (free_nodes.empty()) {
+            new_root = new Node<T>(min_degree);
+        }
+        else {
+            new_root = free_nodes.back();
+            free_nodes.pop_back();
+        }
+
         Node<T> *child_ptr = root;
 
         new_root->is_leaf = false;
@@ -169,7 +200,16 @@ template <class T>
 void BTree<T>::split_child(Node<T> *node, int index) {
 
     Node<T> *child1 = node->children[index]; // child to be split
-    Node<T> *child2 = new Node<T>(min_degree); // child splitting into
+//    Node<T> *child2 = new Node<T>(min_degree); // child splitting into
+    Node<T> *child2;
+    if (free_nodes.empty()) {
+        child2 = new Node<T>(min_degree);
+    }
+    else {
+        child2 = free_nodes.back();
+        free_nodes.pop_back();
+    }
+
     child2->is_leaf = child1->is_leaf;
     child2->num_keys = min_degree - 1;
 
@@ -498,7 +538,9 @@ void BTree<T>::merge_children(Node<T> *node, int index) {
     node->num_keys--;
 
     // free memory used by right_child
-    delete right_child;
+//    delete right_child;
+    right_child->num_keys = 0;
+    free_nodes.push_back(right_child);
 
     // decrease height variable if height of b-tree has decremented
     if (node == root && node->num_keys == 0) {

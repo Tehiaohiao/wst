@@ -426,20 +426,25 @@ void time_wst_ms(std::string tree_file, std::string search_file) {
 int main(int argc, char *argv[])
 {
 
-    string tree_file = "data/original_unique_1_500000";
-    string insert_file = "data/uniform0_50000";
-    string search_file = "data/uniform1_50000";
-    string delete_file = "data/uniform2_50000";
+    string tree_file_btree = "data/original_unique_1_500000";
+    string insert_file_btree = "data/uniform0_50000";
+    string search_file_btree = "data/uniform1_50000";
+    string delete_file_btree = "data/uniform2_50000";
 
-    run_btree_command_line();
+//    string tree_file_wst = "data/original_unique_1_500000_copy";
+//    string insert_file_wst = "data/uniform0_50000_copy";
+//    string search_file_wst = "data/uniform1_50000_copy";
+//    string delete_file_wst = "data/uniform2_50000_copy";
+
+//    run_btree_command_line();
         //run_workingsettree_command_line();
         //time_btree_sec();
-//        time_btree_ms(tree_file, insert_file, search_file, delete_file);
+        time_btree_ms(tree_file_btree, insert_file_btree, search_file_btree, delete_file_btree);
 
-//        cout << "\n\n" << endl;
+        cout << "\n\n" << endl;
 
         //time_wst_sec();
-//        time_wst_ms(tree_file, search_file);
+        time_wst_ms(tree_file_btree, search_file_btree);
 
         return 0;
 }
