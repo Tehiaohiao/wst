@@ -49,8 +49,6 @@ private:
     std::pair<Node<T>*, int> search_node(Node<T> *node, T val, bool delete_element, bool modify_linked_list, Element<T> *new_pos);
     void split_child(Node<T> *node, int index);
     int insert_nonfull(Node<T> *node, T element);
-    bool remove_helper(Node<T> *node, T val, bool modify_linked_list, Element<T> *new_pos); // returns whether val was found in the tree
-                                                                                            // new_pos is the new position of the removed element
     void merge_children(Node<T> *node, int index);
     void steal_from_left_neighbor(Node<T> *node, int index);
     void steal_from_right_neighbor(Node<T> *node, int index);
@@ -406,172 +404,12 @@ int BTree<T>::insert_nonfull(Node<T> *node, T element) {
 template <class T>
 bool BTree<T>::remove(T value) {
     size_--;
-    //    return remove_helper(root, value, true, nullptr);
     std::pair<Node<T>*, int> node_index = search_node(root, value, true, true, nullptr);
     if (node_index.second == -1) {
         return false;
     }
     else {
         return true;
-    }
-}
-
-// Inputs:
-//    node: the root of the subtree from which val is deleted
-//    val: key to be deleted
-//    modify_linked_list: insert to the front of the linked list when true, maintain current
-//							position in the linked list but move element to new_pos when false
-// Return value: true if value found and removed, false otherwise
-template <class T>
-bool BTree<T>::remove_helper(Node<T> *node, T val, bool modify_linked_list, Element<T> *new_pos) { // modify only leaves? for now
-
-                                                                                                   // find the index i of val in node
-    int i = 0;
-    while (i < node->num_keys && val > node->keys[i].key) {
-        i++;
-    }
-
-    if (node->is_leaf) { // at leaf of tree
-        if (i < node->num_keys && val == node->keys[i].key) { // val found in leaf
-
-            Element<T> *k = &(node->keys[i]);
-
-            if (modify_linked_list) {
-
-                // delete val from linked list by updating next and previous
-                //  elements' pointers
-                k->next->prev = k->prev;
-                k->prev->next = k->next;
-
-            }
-            else {
-
-                // do not delete val from linked list. Instead update the pointer
-                //  to new_pos
-                new_pos->prev = k->prev;
-                new_pos->next = k->next;
-                k->prev->next = new_pos;
-                k->next->prev = new_pos;
-
-            }
-
-            // delete the i^th element from keys by moving all subsequent
-            //   elements forward by one position
-            for (int j = i; j < node->num_keys - 1; j++) {
-                node->keys[j] = node->keys[j + 1];
-                node->keys[j].next->prev = &(node->keys[j]);
-                node->keys[j].prev->next = &(node->keys[j]);
-            }
-            node->num_keys--;
-
-            return true;
-        }
-        else { // val not found in leaf
-            return false;
-        }
-    }
-    else if (i < node->num_keys && val == node->keys[i].key) { // val found in internal node
-
-        if (node->children[i]->num_keys >= min_degree) { // 2a
-                                                         // 2a: the i^th child has more than the minimum number of keys
-
-                                                         // delete val from linked list
-            node->keys[i].next->prev = node->keys[i].prev;
-            node->keys[i].prev->next = node->keys[i].next;
-
-            // find the largest element smaller than val
-            Element<T> *predecessor = find_max_key(node->children[i]);
-            Element<T> pred_copy = Element<T>();
-            pred_copy = *predecessor;
-
-            // remove the predecessor from its original position and
-            //  replace val with predecessor at its current position
-            remove_helper(node, predecessor->key, false, &(node->keys[i]));
-            node->keys[i].key = pred_copy.key;
-
-            size_++;
-
-        }
-        else if (node->children[i + 1]->num_keys >= min_degree) { //2b
-                                                                  // 2b: the (i+1)^th child has more than the minimum number of keys
-
-                                                                  // delete val from linked list
-            node->keys[i].next->prev = node->keys[i].prev;
-            node->keys[i].prev->next = node->keys[i].next;
-
-            // find the smallest element larger than val
-            Element<T> *successor = find_min_key(node->children[i + 1]);
-            Element<T> succ_copy = Element<T>();
-            succ_copy = *successor;
-
-            // remove the successor from its original position and
-            //  replace val with successor at val's current position
-            remove_helper(node, successor->key, false, &(node->keys[i]));
-            node->keys[i].key = succ_copy.key;
-
-            size_++;
-
-        }
-        else { // 2c
-               // 2c: both children have exactly the minimum number of keys
-
-            merge_children(node, i);
-
-            // print current tree if in debug mode
-            if (DEBUG) {
-                std::cout << to_string() << std::endl;
-            }
-
-            // recursively delete val on the left child
-            remove_helper(node->children[i], val, modify_linked_list, new_pos);
-
-        }
-
-        return true;
-
-    }
-    else { // val not found in internal node
-
-           // if child node to recurse on has the minimum allowed number of keys
-           //  adjust tree such that the node has at least min_degree number of elements
-        if (node->children[i]->num_keys == min_degree - 1) {
-
-            // if one of its siblings has at least t keys, steal from sibling
-            if (i > 0 && node->children[i - 1]->num_keys >= min_degree) { //3a
-                                                                          // 3a: its left neighbor has more than the minimum number of elements
-
-                steal_from_left_neighbor(node, i);
-
-            }
-            else if (i < node->num_keys && node->children[i + 1]->num_keys >= min_degree) { //3b
-                                                                                            // 3b: its right neighbor has more than the minimum number of elements
-
-                steal_from_right_neighbor(node, i);
-
-            }
-            else { // 3c
-                   // 3c: both siblings have t-1 keys, merge with a sibling
-                if (i < node->num_keys) { // merge with right sibling
-
-                    merge_children(node, i);
-
-                }
-                else { // i = node.num_keys, merge with left sibling
-
-                    merge_children(node, i - 1);
-                    i--;
-
-                }
-            }
-
-        }
-
-        if (DEBUG) {
-            std::cout << to_string() << std::endl;
-        }
-
-        // recurse
-        return remove_helper(node->children[i], val, modify_linked_list, new_pos);
     }
 }
 
