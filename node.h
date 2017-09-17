@@ -21,17 +21,21 @@ struct Node {
     int num_keys;
     bool is_leaf;
     int min_degree;
+    Node<T> *parent;
+    int index_in_parent; // its index in the parent's children vector
     std::vector<Element<T> > keys;
     std::vector<Node<T>*> children;
 
-    Node() : num_keys(0), is_leaf(true), min_degree(DEFAULT_MIN_DEGR) {
+    Node() : num_keys(0), is_leaf(true), min_degree(DEFAULT_MIN_DEGR), index_in_parent(-1) {
         keys.resize(min_degree * 2 - 1);
         children.resize(min_degree * 2);
+        parent = nullptr;
     }
 
-    Node(int md) : num_keys(0), is_leaf(true), min_degree(md) {
+    Node(int md) : num_keys(0), is_leaf(true), min_degree(md), index_in_parent(-1) {
         keys.resize(min_degree * 2 - 1);
         children.resize(min_degree * 2);
+        parent = nullptr;
     }
 };
 

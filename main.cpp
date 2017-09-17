@@ -22,11 +22,12 @@ int insert_file_wst(std::string filename, WorkingSetTree<int> &wst) {
     }
 
     std::string line;
-
+    int i = 1;
     // read the file line by line
     while (getline(ifs, line)) {
         wst.insert(stoi(line));
-        //cout << "1";
+//        cout << i << endl;
+//        i++;
     }
     //cout << endl;
     return 0;
@@ -146,14 +147,14 @@ void run_btree_command_line() {
                 break;
             case 2: // search for elements
                 while (iss >> num_str) {
-                    pair<Node<int>&, int> node_index = btree.search(stoi(num_str));
+                    pair<Node<int>*, int> node_index = btree.search(stoi(num_str));
                     cout << num_str << ": ";
                     if (node_index.second == -1) {
                         cout << "element not found" << endl;
                     }
                     else {
                         cout << "elemnt found at index " << node_index.second << " of the following node..."
-                            << node_to_string(node_index.first) << endl;
+                            << node_to_string(*(node_index.first)) << endl;
                     }
                 }
                 break;
@@ -437,7 +438,7 @@ int main(int argc, char *argv[])
 //    string delete_file_wst = "data/uniform2_50000_copy";
 
 //    run_btree_command_line();
-        //run_workingsettree_command_line();
+//        run_workingsettree_command_line();
         //time_btree_sec();
         time_btree_ms(tree_file_btree, insert_file_btree, search_file_btree, delete_file_btree);
 

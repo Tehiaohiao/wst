@@ -94,7 +94,7 @@ bool WorkingSetTree<T>::search(T val) {
     int index = 0;
     int num_trees = trees.size();
     while (index < num_trees) {
-        std::pair<Node<T>&, int> node_index = trees[index]->search(val);
+        std::pair<Node<T>*, int> node_index = trees[index]->search(val);
         if (node_index.second == -1) { // val not found in this tree
             index++;
         }

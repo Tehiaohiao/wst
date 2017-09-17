@@ -23,7 +23,7 @@ public:
         create_tree();
     }
     ~BTree();
-    std::pair<Node<T>&, int> search(T val);
+    std::pair<Node<T>*, int> search(T val);
     int insert(T val);
     void insert_lru(T val);
     bool remove(T val); // returns whether val was found in the tree
@@ -46,7 +46,7 @@ private:
     std::vector<Node<T> *> free_nodes;
     void create_tree();
     void destroy_tree(Node<T> *node);
-    std::pair<Node<T>&, int> search_node(Node<T> &node, T val);
+    std::pair<Node<T>*, int> search_node(Node<T> *node, T val, bool delete_element, bool modify_linked_list, Element<T> *new_pos);
     void split_child(Node<T> *node, int index);
     int insert_nonfull(Node<T> *node, T element);
     bool remove_helper(Node<T> *node, T val, bool modify_linked_list, Element<T> *new_pos); // returns whether val was found in the tree
@@ -56,7 +56,7 @@ private:
     void steal_from_right_neighbor(Node<T> *node, int index);
     Element<T>* find_max_key(Node<T> *node); // implemented recursively. can be implemented iteratively
     Element<T>* find_min_key(Node<T> *node); // implemented recursively. can be implemented iteratively
-
+    void fix_up(Node<T> *node);
 };
 
 template <class T>
@@ -68,15 +68,15 @@ void BTree<T>::create_tree() {
 
     int num_free_nodes = 1; // root plus the one possible extra node when tree exceeds max_height
     int curr_lvl_nodes = 1;
-    for (int i=1; i<max_height; ++i) {
-        curr_lvl_nodes = curr_lvl_nodes * (min_degree*2);
+    for (int i = 1; i<max_height; ++i) {
+        curr_lvl_nodes = curr_lvl_nodes * (min_degree * 2);
         num_free_nodes = num_free_nodes + curr_lvl_nodes;
         if (num_free_nodes > MAX_NUM_FREE_NODES) {
             num_free_nodes = MAX_NUM_FREE_NODES;
         }
     }
 
-    for (int j=0; j<num_free_nodes; ++j) {
+    for (int j = 0; j<num_free_nodes; ++j) {
         free_nodes.push_back(new Node<T>(min_degree));
     }
 }
@@ -104,37 +104,133 @@ void BTree<T>::destroy_tree(Node<T> *node) {
 }
 
 template <class T>
-std::pair<Node<T>&, int> BTree<T>::search(T val) {
+std::pair<Node<T>*, int> BTree<T>::search(T val) {
     // call helper function and start search at the root
-    return search_node(*root, val);
+    return search_node(root, val, false, true, nullptr);
 }
 
 template <class T>
-std::pair<Node<T>&, int> BTree<T>::search_node(Node<T> &node, T val) {
+std::pair<Node<T>*, int> BTree<T>::search_node(Node<T> *node, T val, bool delete_element, bool modify_linked_list, Element<T> *new_pos) {
 
     // find the index i of val in node
     // val is at index i, or in the i^th child of node
     int i = 0;
-    while (i<node.num_keys && val>node.keys[i].key) {
+    while (i<node->num_keys && val>node->keys[i].key) {
         i++;
     }
 
-    if (i < node.num_keys && val == node.keys[i].key) { // val is found at index i
+    if (i < node->num_keys && val == node->keys[i].key) { // val is found at index i
 
-        // -------- see if the following can be done without typedef (and in else if)
-        typedef std::pair<Node<T>&, int> node_index;
-        return node_index(node, i);
+        if (delete_element) {
+
+            Element<T> *k = &(node->keys[i]);
+
+            if (node->is_leaf) {
+
+                if (modify_linked_list) {
+
+                    // delete val from linked list by updating next and previous
+                    //  elements' pointers
+                    k->next->prev = k->prev;
+                    k->prev->next = k->next;
+
+                }
+                else {
+
+                    // do not delete val from linked list. Instead update the pointer
+                    //  to new_pos
+                    new_pos->prev = k->prev;
+                    new_pos->next = k->next;
+                    k->prev->next = new_pos;
+                    k->next->prev = new_pos;
+
+                }
+
+                // delete the i^th element from keys by moving all subsequent
+                //   elements forward by one position
+                for (int j = i; j < node->num_keys - 1; j++) {
+                    node->keys[j] = node->keys[j + 1];
+                    node->keys[j].next->prev = &(node->keys[j]);
+                    node->keys[j].prev->next = &(node->keys[j]);
+                }
+                node->num_keys--;
+
+                fix_up(node);
+
+                // ----------- maybe return something different
+                typedef std::pair<Node<T> *, int> node_index;
+                // returned index is -1 when element is not found
+                return node_index(node, -2);
+            }
+            else {
+
+                // 2b: the (i+1)^th child has more than the minimum number of keys
+
+                // delete val from linked list
+                node->keys[i].next->prev = node->keys[i].prev;
+                node->keys[i].prev->next = node->keys[i].next;
+
+                // find the smallest element larger than val
+                Element<T> *successor = find_min_key(node->children[i + 1]);
+                Element<T> succ_copy = Element<T>();
+                succ_copy = *successor;
+                node->keys[i].key = succ_copy.key;
+                size_++;
+                // remove the successor from its original position and
+                //  replace val with successor at val's current position
+                // remove_helper(node, successor->key, false, &(node->keys[i]));
+                search_node(node->children[i + 1], successor->key, true, false, &(node->keys[i]));
+
+            }
+
+        }
+        else {
+            // -------- see if the following can be done without typedef (and in else if)
+            typedef std::pair<Node<T>*, int> node_index;
+            return node_index(node, i);
+        }
     }
-    else if (node.is_leaf) { // reached a leaf and val not found
-        typedef std::pair<Node<T>&, int> node_index;
+    else if (node->is_leaf) { // reached a leaf and val not found
+        typedef std::pair<Node<T>*, int> node_index;
 
         // returned index is -1 when element is not found
         return node_index(node, -1);
     }
     else {
         // recursively search for val in node's i^th child
-        return search_node(*node.children[i], val);
+        return search_node(node->children[i], val, delete_element, modify_linked_list, new_pos);
     }
+}
+
+template <class T>
+void BTree<T>::fix_up(Node<T> *node) {
+    if (node->num_keys >= min_degree - 1) {
+        return;
+    }
+
+    if (node->index_in_parent > 0 && node->parent->children[node->index_in_parent - 1]->num_keys >= min_degree) {
+        steal_from_left_neighbor(node->parent, node->index_in_parent);
+
+    }
+    else if (node->index_in_parent < node->parent->num_keys && node->parent->children[node->index_in_parent + 1]->num_keys >= min_degree) { // node->index_in_parent = 0
+        steal_from_right_neighbor(node->parent, node->index_in_parent);
+    }
+    else { // steal from parent and merge with sibling
+        Node<T> *child_node = node;
+
+        if (node->index_in_parent < node->parent->num_keys) {
+            merge_children(node->parent, node->index_in_parent);
+        }
+        else {
+            child_node = node->parent->children[node->index_in_parent-1];
+            merge_children(node->parent, node->index_in_parent - 1);
+        }
+
+        if (child_node->parent != nullptr) {
+            fix_up(child_node->parent);
+        }
+    }
+
 }
 
 template <class T>
@@ -147,7 +243,6 @@ int BTree<T>::insert(T val) {
 
         // root node is full, split into two nodes and move middle
         // 	element up to become the new root
-//        Node<T> *new_root = new Node<T>(min_degree);
         Node<T> *new_root;
         if (free_nodes.empty()) {
             new_root = new Node<T>(min_degree);
@@ -161,7 +256,8 @@ int BTree<T>::insert(T val) {
 
         new_root->is_leaf = false;
         new_root->children[0] = child_ptr;
-
+        child_ptr->parent = new_root;
+        child_ptr->index_in_parent = 0;
         root = new_root;
         height++;
         split_child(root, 0);
@@ -200,7 +296,7 @@ template <class T>
 void BTree<T>::split_child(Node<T> *node, int index) {
 
     Node<T> *child1 = node->children[index]; // child to be split
-//    Node<T> *child2 = new Node<T>(min_degree); // child splitting into
+                                             //    Node<T> *child2 = new Node<T>(min_degree); // child splitting into
     Node<T> *child2;
     if (free_nodes.empty()) {
         child2 = new Node<T>(min_degree);
@@ -212,7 +308,8 @@ void BTree<T>::split_child(Node<T> *node, int index) {
 
     child2->is_leaf = child1->is_leaf;
     child2->num_keys = min_degree - 1;
-
+    child2->parent = node;
+    child2->index_in_parent = index + 1;
     // move the right half of child1's keys to child2
     for (int i = child2->num_keys - 1; i >= 0; --i) {
         child2->keys[i] = child1->keys[min_degree + i];
@@ -224,6 +321,8 @@ void BTree<T>::split_child(Node<T> *node, int index) {
     if (!child1->is_leaf) {
         for (int i = 0; i < min_degree; ++i) {
             child2->children[i] = child1->children[min_degree + i];
+            child2->children[i]->parent = child2;
+            child2->children[i]->index_in_parent = i;
         }
     }
 
@@ -233,6 +332,7 @@ void BTree<T>::split_child(Node<T> *node, int index) {
     // insert child2 into node's vector of children
     for (int i = node->num_keys; i >= index + 1; i--) {
         node->children[i + 1] = node->children[i];
+        node->children[i + 1]->index_in_parent = i + 1;
     }
     node->children[index + 1] = child2;
 
@@ -305,8 +405,15 @@ int BTree<T>::insert_nonfull(Node<T> *node, T element) {
 
 template <class T>
 bool BTree<T>::remove(T value) {
-    return remove_helper(root, value, true, nullptr);
     size_--;
+    //    return remove_helper(root, value, true, nullptr);
+    std::pair<Node<T>*, int> node_index = search_node(root, value, true, true, nullptr);
+    if (node_index.second == -1) {
+        return false;
+    }
+    else {
+        return true;
+    }
 }
 
 // Inputs:
@@ -318,7 +425,7 @@ bool BTree<T>::remove(T value) {
 template <class T>
 bool BTree<T>::remove_helper(Node<T> *node, T val, bool modify_linked_list, Element<T> *new_pos) { // modify only leaves? for now
 
-    // find the index i of val in node
+                                                                                                   // find the index i of val in node
     int i = 0;
     while (i < node->num_keys && val > node->keys[i].key) {
         i++;
@@ -366,9 +473,9 @@ bool BTree<T>::remove_helper(Node<T> *node, T val, bool modify_linked_list, Elem
     else if (i < node->num_keys && val == node->keys[i].key) { // val found in internal node
 
         if (node->children[i]->num_keys >= min_degree) { // 2a
-            // 2a: the i^th child has more than the minimum number of keys
+                                                         // 2a: the i^th child has more than the minimum number of keys
 
-            // delete val from linked list
+                                                         // delete val from linked list
             node->keys[i].next->prev = node->keys[i].prev;
             node->keys[i].prev->next = node->keys[i].next;
 
@@ -386,9 +493,9 @@ bool BTree<T>::remove_helper(Node<T> *node, T val, bool modify_linked_list, Elem
 
         }
         else if (node->children[i + 1]->num_keys >= min_degree) { //2b
-            // 2b: the (i+1)^th child has more than the minimum number of keys
+                                                                  // 2b: the (i+1)^th child has more than the minimum number of keys
 
-            // delete val from linked list
+                                                                  // delete val from linked list
             node->keys[i].next->prev = node->keys[i].prev;
             node->keys[i].prev->next = node->keys[i].next;
 
@@ -406,7 +513,7 @@ bool BTree<T>::remove_helper(Node<T> *node, T val, bool modify_linked_list, Elem
 
         }
         else { // 2c
-            // 2c: both children have exactly the minimum number of keys
+               // 2c: both children have exactly the minimum number of keys
 
             merge_children(node, i);
 
@@ -425,25 +532,25 @@ bool BTree<T>::remove_helper(Node<T> *node, T val, bool modify_linked_list, Elem
     }
     else { // val not found in internal node
 
-        // if child node to recurse on has the minimum allowed number of keys
-        //  adjust tree such that the node has at least min_degree number of elements
+           // if child node to recurse on has the minimum allowed number of keys
+           //  adjust tree such that the node has at least min_degree number of elements
         if (node->children[i]->num_keys == min_degree - 1) {
 
             // if one of its siblings has at least t keys, steal from sibling
             if (i > 0 && node->children[i - 1]->num_keys >= min_degree) { //3a
-                // 3a: its left neighbor has more than the minimum number of elements
+                                                                          // 3a: its left neighbor has more than the minimum number of elements
 
                 steal_from_left_neighbor(node, i);
 
             }
             else if (i < node->num_keys && node->children[i + 1]->num_keys >= min_degree) { //3b
-                // 3b: its right neighbor has more than the minimum number of elements
+                                                                                            // 3b: its right neighbor has more than the minimum number of elements
 
                 steal_from_right_neighbor(node, i);
 
             }
             else { // 3c
-                // 3c: both siblings have t-1 keys, merge with a sibling
+                   // 3c: both siblings have t-1 keys, merge with a sibling
                 if (i < node->num_keys) { // merge with right sibling
 
                     merge_children(node, i);
@@ -451,7 +558,7 @@ bool BTree<T>::remove_helper(Node<T> *node, T val, bool modify_linked_list, Elem
                 }
                 else { // i = node.num_keys, merge with left sibling
 
-                    merge_children(node, i-1);
+                    merge_children(node, i - 1);
                     i--;
 
                 }
@@ -500,24 +607,24 @@ void BTree<T>::merge_children(Node<T> *node, int index) {
     // merge val and right child to left child
 
     // move val to left child
-    left_child->keys[min_degree - 1] = node->keys[index];
-    left_child->keys[min_degree - 1].prev->next = &(left_child->keys[min_degree - 1]);
-    left_child->keys[min_degree - 1].next->prev = &(left_child->keys[min_degree - 1]);
+    left_child->keys[left_child->num_keys] = node->keys[index];
+    left_child->keys[left_child->num_keys].prev->next = &(left_child->keys[left_child->num_keys]);
+    left_child->keys[left_child->num_keys].next->prev = &(left_child->keys[left_child->num_keys]);
 
     // move all keys from right_child to left child and update linked list pointers
     for (int j = 0; j < right_child->num_keys; ++j) {
-
-        int index = j + min_degree;
-        left_child->keys[index] = right_child->keys[j];
-        left_child->keys[index].next->prev = &(left_child->keys[index]);
-        left_child->keys[index].prev->next = &(left_child->keys[index]);
-
+        int i = j + left_child->num_keys + 1;
+        left_child->keys[i] = right_child->keys[j];
+        left_child->keys[i].next->prev = &(left_child->keys[i]);
+        left_child->keys[i].prev->next = &(left_child->keys[i]);
     }
 
     // append all right child's children to left child's children vector
     if (!right_child->is_leaf) {
         for (int j = 0; j <= right_child->num_keys; ++j) {
-            left_child->children[min_degree + j] = right_child->children[j];
+            left_child->children[left_child->num_keys + 1 + j] = right_child->children[j];
+            left_child->children[left_child->num_keys + 1 + j]->parent = left_child;
+            left_child->children[left_child->num_keys + 1 + j]->index_in_parent = left_child->num_keys + 1 + j;
         }
     }
 
@@ -532,19 +639,20 @@ void BTree<T>::merge_children(Node<T> *node, int index) {
     //  in the children vector
     for (int j = index + 1; j < node->num_keys; ++j) {
         node->children[j] = node->children[j + 1];
+        node->children[j]->index_in_parent--;
     }
 
-    left_child->num_keys = min_degree * 2 - 1;
+    left_child->num_keys += right_child->num_keys + 1;
     node->num_keys--;
 
-    // free memory used by right_child
-//    delete right_child;
     right_child->num_keys = 0;
+    right_child->parent = nullptr;
     free_nodes.push_back(right_child);
 
     // decrease height variable if height of b-tree has decremented
     if (node == root && node->num_keys == 0) {
         root = left_child;
+        left_child->parent = nullptr;
         height--;
     }
 }
@@ -580,9 +688,11 @@ void BTree<T>::steal_from_left_neighbor(Node<T> *node, int index) {
 
         for (int j = child->num_keys; j >= 0; j--) {
             child->children[j + 1] = child->children[j];
+            child->children[j + 1]->index_in_parent++;
         }
         child->children[0] = left_child->children[left_child->num_keys];
-
+        child->children[0]->parent = child;
+        child->children[0]->index_in_parent = 0;
     }
 
     left_child->num_keys--;
@@ -620,9 +730,11 @@ void BTree<T>::steal_from_right_neighbor(Node<T> *node, int index) {
     if (!child->is_leaf) {
 
         child->children[child->num_keys + 1] = right_child->children[0];
-
+        child->children[child->num_keys + 1]->parent = child;
+        child->children[child->num_keys + 1]->index_in_parent = child->num_keys + 1;
         for (int j = 0; j < right_child->num_keys; ++j) {
             right_child->children[j] = right_child->children[j + 1];
+            right_child->children[j]->index_in_parent--;
         }
 
     }
