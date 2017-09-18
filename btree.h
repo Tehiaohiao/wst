@@ -52,7 +52,6 @@ private:
     void merge_children(Node<T> *node, int index);
     void steal_from_left_neighbor(Node<T> *node, int index);
     void steal_from_right_neighbor(Node<T> *node, int index);
-    Element<T>* find_max_key(Node<T> *node); // implemented recursively. can be implemented iteratively
     Element<T>* find_min_key(Node<T> *node); // implemented recursively. can be implemented iteratively
     void fix_up(Node<T> *node);
 };
@@ -410,17 +409,6 @@ bool BTree<T>::remove(T value) {
     }
     else {
         return true;
-    }
-}
-
-// find the largest element in the subtree rooted at node
-template <class T>
-Element<T>* BTree<T>::find_max_key(Node<T> *node) {
-    if (node->is_leaf) {
-        return &node->keys[node->num_keys - 1];
-    }
-    else {
-        return find_max_key(node->children[node->num_keys]);
     }
 }
 
