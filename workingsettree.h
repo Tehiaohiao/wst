@@ -14,28 +14,24 @@ template <class T>
 class WorkingSetTree {
 public:
     WorkingSetTree() : size_(0), min_degree(DEFAULT_MINIMUM_DEGREE), scale_factor(DEFAULT_SCALE_FACTOR) {
-        //std::shared_ptr<BTree<T>> tree = std::make_shared<BTree<T>>(min_degree, BASE_HEIGHT);
         BTree<T> *tree = new BTree<T>(min_degree, BASE_HEIGHT);
         trees.push_back(tree);
     }
     WorkingSetTree(int degree, int factor = DEFAULT_SCALE_FACTOR) : size_(0), min_degree(degree), scale_factor(factor) {
-        //std::shared_ptr<BTree<T>> tree = std::make_shared<BTree<T>>(min_degree, BASE_HEIGHT);
         BTree<T> *tree = new BTree<T>(min_degree, BASE_HEIGHT);
         trees.push_back(tree);
     }
     ~WorkingSetTree();
     void insert(T value);
-    //std::pair<Node<T>&, int> search(T val);
     bool search(T val);
     bool remove(T val);
     int size();
     std::string to_string();
     std::string print_list();
 private:
+    int size_;
     int min_degree;
     int scale_factor;
-    int size_;
-    //std::vector<std::shared_ptr<BTree<T>>> trees;
     std::vector<BTree<T>*> trees;
     void shift_back(int start_tree_index);
     void shift_forward(int tree_index);
@@ -56,46 +52,14 @@ void WorkingSetTree<T>::insert(T value) {
     size_++;
 }
 
-/*
-template <class T>
-std::pair<Node<T>&, int> WorkingSetTree<T>::search(T val) {
-
-    int index = 0;
-    int num_trees = trees.size();
-    while (index < num_trees) {
-        std::pair<Node<T>&, int> node_index = trees[index]->search(val);
-        if (node_index.second == -1) { // val not found in this tree
-            index++;
-        }
-        else { // val found. move val to the previous tree (if at tree index 0, move to beginning)
-            int new_index = index - 1;
-            if (new_index < 0) {
-                new_index = 0;
-            }
-            trees[index]->remove(val);
-
-            trees[new_index]->insert(val);
-            shift_back(new_index);
-
-            // TODO move things to tree at index if not enough elements?
-            shift_forward(index);
-
-            return trees[new_index]->search(val);
-        }
-    }
-    return trees[0]->search(val);
-
-}
-*/
-
 template <class T>
 bool WorkingSetTree<T>::search(T val) {
 
     int index = 0;
     int num_trees = trees.size();
     while (index < num_trees) {
-        std::pair<Node<T>*, int> node_index = trees[index]->search(val);
-        if (node_index.second == -1) { // val not found in this tree
+//        std::pair<Node<T>*, int> node_index = trees[index]->search(val);
+        if (!trees[index]->remove(val)) { // val not found in this tree
             index++;
         }
         else { // val found. move val to the previous tree (if at tree index 0, move to beginning)
@@ -103,12 +67,8 @@ bool WorkingSetTree<T>::search(T val) {
             if (new_index < 0) {
                 new_index = 0;
             }
-            trees[index]->remove(val);
-
             trees[new_index]->insert(val);
             shift_back(new_index);
-
-            // TODO move things to tree at index if not enough elements?
             shift_forward(index);
 
             return true;

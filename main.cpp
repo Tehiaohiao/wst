@@ -22,14 +22,11 @@ int insert_file_wst(std::string filename, WorkingSetTree<int> &wst) {
     }
 
     std::string line;
-    int i = 1;
     // read the file line by line
     while (getline(ifs, line)) {
         wst.insert(stoi(line));
-//        cout << i << endl;
-//        i++;
     }
-    //cout << endl;
+
     return 0;
 }
 
@@ -437,15 +434,15 @@ int main(int argc, char *argv[])
 //    string search_file_wst = "data/uniform1_50000_copy";
 //    string delete_file_wst = "data/uniform2_50000_copy";
 
-    run_btree_command_line();
+//    run_btree_command_line();
 //        run_workingsettree_command_line();
         //time_btree_sec();
-//        time_btree_ms(tree_file_btree, insert_file_btree, search_file_btree, delete_file_btree);
+        time_btree_ms(tree_file_btree, insert_file_btree, search_file_btree, delete_file_btree);
 
-//        cout << "\n\n" << endl;
+        cout << "\n\n" << endl;
 
         //time_wst_sec();
-//        time_wst_ms(tree_file_btree, search_file_btree);
+        time_wst_ms(tree_file_btree, search_file_btree);
 
         return 0;
 }

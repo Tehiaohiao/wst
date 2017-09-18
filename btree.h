@@ -156,7 +156,7 @@ std::pair<Node<T>*, int> BTree<T>::search_node(Node<T> *node, T val, bool delete
 
                 // ----------- maybe return something different
                 typedef std::pair<Node<T> *, int> node_index;
-                // returned index is -1 when element is not found
+                // returned index is -2 when element is deleted
                 return node_index(node, -2);
             }
             else {
@@ -177,6 +177,10 @@ std::pair<Node<T>*, int> BTree<T>::search_node(Node<T> *node, T val, bool delete
                 //  replace val with successor at val's current position
                 // remove_helper(node, successor->key, false, &(node->keys[i]));
                 search_node(node->children[i + 1], successor->key, true, false, &(node->keys[i]));
+
+                typedef std::pair<Node<T> *, int> node_index;
+                // returned index is -2 when element is deleted
+                return node_index(node, -2);
 
             }
 
